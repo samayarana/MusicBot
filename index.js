@@ -54,13 +54,16 @@ const riffy = new Riffy(client, config.lavalink.nodes, {
 
 async function searchTrack(query, requester) {
   try {
+    const requesterId = typeof requester === 'string' ? requester : requester?.id || 'unknown';
+    
     if (query.startsWith('http')) {
       try {
-        const res = await riffy.resolve({ query: query, requester: requester });
+        const res = await riffy.resolve({ query: query, requester: requesterId });
         if (res && res.tracks && Array.isArray(res.tracks) && res.tracks.length > 0) {
           return res;
         }
       } catch (urlError) {
+        console.error('URL search error:', urlError.message);
       }
     }
 
@@ -78,25 +81,33 @@ async function searchTrack(query, requester) {
 
     for (const searchQuery of searchFormats) {
       try {
-        const res = await riffy.resolve({ query: searchQuery, requester: requester });
+        console.log(`[SEARCH] Trying: ${searchQuery}`);
+        const res = await riffy.resolve({ query: searchQuery, requester: requesterId });
+
+        console.log(`[SEARCH] Result:`, res?.loadType, 'Tracks:', res?.tracks?.length || 0);
 
         if (res && res.loadType && res.loadType !== 'error' && res.loadType !== 'empty') {
           if (res.tracks && Array.isArray(res.tracks) && res.tracks.length > 0) {
+            console.log(`[SEARCH] ✅ Found ${res.tracks.length} tracks`);
             return res;
           }
         }
 
         if (res?.loadType === 'error') {
+          console.log(`[SEARCH] Error response, trying next format`);
           continue;
         }
       } catch (searchError) {
+        console.error(`[SEARCH] Error with ${searchQuery}:`, searchError.message);
         continue;
       }
     }
 
+    console.log(`[SEARCH] ❌ No results found for: ${cleanQuery}`);
     return { loadType: 'empty', tracks: [] };
 
   } catch (error) {
+    console.error('[SEARCH] Fatal error:', error);
     return { loadType: 'empty', tracks: [] };
   }
 }
@@ -449,7 +460,7 @@ async function handlePlayCommand(interaction, query) {
   if (!player.twentyFourSeven) player.twentyFourSeven = false;
 
   try {
-    const res = await searchTrack(query, interaction.user);
+    const res = await searchTrack(query, interaction.user.id);
 
     if (!res || res.loadType === 'empty' || !res.tracks || !res.tracks.length) {
       const container = new ContainerBuilder()
@@ -460,7 +471,7 @@ async function handlePlayCommand(interaction, query) {
         );
       container.addSeparatorComponents(new SeparatorBuilder());
       container.addTextDisplayComponents(
-        new TextDisplayBuilder().setContent(`-# Requested by ${interaction.user.tag}`)
+        new TextDisplayBuilder().setContent(`-# Requested by ${interaction.user.username || interaction.user.tag || 'Unknown'}`)
       );
       return interaction[replyMethod]({ components: [container], flags: MessageFlags.IsComponentsV2 });
     }
@@ -489,13 +500,13 @@ async function handlePlayCommand(interaction, query) {
       );
       container.addSeparatorComponents(new SeparatorBuilder());
       container.addTextDisplayComponents(
-        new TextDisplayBuilder().setContent(`-# Requested by ${interaction.user.tag}`)
+        new TextDisplayBuilder().setContent(`-# Requested by ${interaction.user.username || interaction.user.tag || 'Unknown'}`)
       );
 
       await interaction[replyMethod]({ components: [container], flags: MessageFlags.IsComponentsV2 });
     } else {
       const track = res.tracks[0];
-      if (!track.requester) track.requester = interaction.user;
+      if (!track.requester) track.requester = interaction.user.id;
       player.queue.add(track);
 
       const container = new ContainerBuilder()
@@ -529,13 +540,13 @@ async function handlePlayCommand(interaction, query) {
       }
       container.addSeparatorComponents(new SeparatorBuilder());
       container.addTextDisplayComponents(
-        new TextDisplayBuilder().setContent(`-# Requested by ${interaction.user.tag}`)
+        new TextDisplayBuilder().setContent(`-# Requested by ${interaction.user.username || interaction.user.tag || 'Unknown'}`)
       );
 
       await interaction[replyMethod]({ components: [container], flags: MessageFlags.IsComponentsV2 });
     }
 
-    if (!player.playing && !player.paused) {
+    if (!player.playing) {
       try {
         await player.play();
 
@@ -616,6 +627,7 @@ async function handlePlayCommand(interaction, query) {
     }
 
   } catch (error) {
+    console.error('[PLAY] Error:', error);
     const errorMessage = error.message || 'Unknown error occurred';
     const container = new ContainerBuilder()
       .setAccentColor(0xFF0000)
