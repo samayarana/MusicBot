@@ -7,7 +7,7 @@ module.exports = {
 
   // Bot Activity
   activity: {
-    name: '/help | https://github.com/Unknownzop/MusicBot',
+    name: '/help',
     type: 'LISTENING' // PLAYING, STREAMING, LISTENING, WATCHING, COMPETING
   },
 
@@ -55,7 +55,7 @@ module.exports = {
 
   // URLs
   urls: {
-    support: process.env.SUPPORT_SERVER || 'https://discord.gg/your-support-server',
+    support: process.env.SUPPORT_SERVER || 'https://discord.gg/3x6vsXwuXg',
     github: 'https://github.com/Unknownzop/MusicBot'
   },
 
