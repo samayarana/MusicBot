@@ -15,9 +15,9 @@ module.exports = {
   lavalink: {
     nodes: [{
       name: 'main',
-      host: 'lava-v4.ajieblogs.eu.org',
-      port: 80,
-      password: 'https://dsc.gg/ajidevserver',
+      host: 'audio.rive.wtf',
+      port: 24597,
+      password: 'youshallnotpass',
       secure: false,
     }],
     defaultSearchEngine: 'youtube'
